@@ -78,9 +78,4 @@ you cannot connect letters that have already been connected
 there is a limit of 10 conncurent connections
 it will throw an error and escape in a terrible format
 
-the plugs in config.csv are defined by
-
-\_example.
-x,y
-u,i
-c,r
+example in config.csv
