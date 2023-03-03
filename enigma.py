@@ -60,52 +60,60 @@ class configurator:
     roters = []
     reflectors = []
     def __init__(self) -> None:
-
         self.configureRotors(); self.configureReflectors()
-
-        for i in range(len(self.RotorConfigs)):
-            if self.RotorConfigs[i] not in self.roters:
-                self.roters.append(roter(self.RotorConfigs[i], i))
-        print(len(self.RotorConfigs), " Rotor configurations loaded")
-
-        for config in self.ReflectorConfigs:
-            if config not in self.reflectors:
-                self.reflectors.append(reflector(config))
-        print(len(self.reflectors), " Reflector configurations loaded")
+        self.loadRotors(); self.loadReflectors()
 
     def getRotor(self, name):
         for rotor in self.roters:
-            if rotor.getName() == name:
-                return rotor
+            if rotor.getName() == name: return rotor
+        raise ValueError("Rotor %s not found" % name)
     def getReflector(self,name):
-        if name == "B":
-            return self.reflectors[0]
-        return self.reflectors[1]
-
+        if name == "B":return self.reflectors[0]
+        if name == "C":return self.reflectors[1]
+        raise ValueError("Reflector %s not found" % name)
+        
     def configureRotors(self):
-        with open("rotorconfig.csv") as file:
-            for line in file:
-                if line != "":
-                    self.RotorConfigs.append(line.strip().split(","))
+        try:
+            with open("rotorconfig.csv") as file:
+                for line in file:
+                    if line != "":self.RotorConfigs.append(line.strip().split(","))
+        except FileNotFoundError:
+            print("rotorconfig.csv not found")
+            exit()          
     def configureReflectors(self):
+        
         try:
             with open('ReflectorModels.csv') as file:
                 for line in file:
-                    if line != '':
-                        line = line.strip().split(',')
-                        self.ReflectorConfigs.append(line)
-        except:
-            with open("/home/siva/code/pyfilesTwo/encyrption/Enigma/ReflectorModels.csv") as file:
-                for line in file:
-                    if line != '':
-                        line = line.strip().split(',')
-                        self.ReflectorConfigs.append(line)
-            
+                    temp = []
+                    if line != '': line = line.strip().split(',')
+                    for pair in line: temp.append(pair.split(' '))
+                    configTemplate = LETTERS.copy()
+                    for l in temp:
+                        left = l[0].upper();right = l[1].upper()
+                        configTemplate[left] = right
+                        configTemplate[right] = left
+                    self.ReflectorConfigs.append(configTemplate)                
+
+        except FileNotFoundError:print("ReflectorModels.csv not found");exit()
+        
+    def loadRotors(self) -> None:
+        for i in range(len(self.RotorConfigs)):
+            temp = roter(self.RotorConfigs[i], i)
+            if temp not in self.roters:
+                self.roters.append(temp)
+        print(len(self.RotorConfigs), " Rotor configurations loaded")
+    def loadReflectors(self) -> None:
+        for key in self.ReflectorConfigs:
+            self.reflectors.append(reflector(key))
+        print(len(self.reflectors), " Reflector configurations loaded")
+
     def makeRotorAssembly(self, rotorNames) -> list:
         output = []
         names = rotorNames.strip().split(' ')
         for name in names:
             output.append(self.getRotor(name))
+        if len(output)!= 3:raise ValueError("Expected 3 rotors, got %s" % len(output))
         return output
 
     def printRotorsAndReflectors(self):
@@ -115,16 +123,17 @@ class configurator:
         print()
         print("Reflectors:")
         for reflector in self.reflectors:
-            print(reflector.getName())
+            print(reflector.getName(), end=" ")
+        print()
     def reset(self):
-        self.RotorConfigs = []
-        self.ReflectorConfigs = []
-        self.roters = []
-        self.reflectors = []
+        self.RotorConfigs.clear()
+        self.ReflectorConfigs.clear()
+        self.roters.clear()
+        self.reflectors.clear()
 
 class roter:
     outbound = []
-    indexTracker = []
+    
     name = ""
     notch = ''
     def __init__(self, config, name) -> None:
@@ -132,7 +141,7 @@ class roter:
         self.name = roman.toRoman(name+ 1)
         self.indexTracker = [i for i in range(1, 27)]
 
-    def setNotch(self):
+    def setNotch(self) -> None:
         match self.name:
             case "I":
                 self.notch = "Q"
@@ -148,51 +157,50 @@ class roter:
                 self.notch = ("M", 'Z')
 
     def onNotch(self) -> bool:
-        if type(self.notch) == type(tuple):
-            return self.outbound[0] in self.notch
+        if type(self.notch) == type(tuple):return self.outbound[0] in self.notch
         return self.outbound[0] == self.notch
-    def getName(self):
+    def getName(self)-> str:
         return self.name
-    def rotate(self):
+    def rotate(self)-> None:
         self.outbound = self.outbound[1:] + self.outbound[:1]
-        self.indexTracker = self.indexTracker[1:] + self.indexTracker[:1]
     
-    def encodefoward(self, c):
+    def encodefoward(self, c)-> str:
         index = LETTERS[c.upper()]
         return self.outbound[index]
     
-    def encodebackward(self, c):
+    def encodebackward(self, c)-> str:
         index = self.outbound.index(c.upper())
         return str(chr(index + 65)).upper()
+    def setStartingPosition(self, index):
+        for i in range(index):
+            self.rotate()
 
 class rotorAssembly:
     rotors = []
     ref = None
-    def __init__(self, rotors, ref):
+    def __init__(self, rotors, ref) -> None:
         self.rotors = rotors
         self.ref = ref
     
-    def encode(self,c):
+    def encode(self,c) -> str:
         self.rotateAll()
         i = self.passFoward(self.rotors.copy(), c)
         ii = self.ref.encode(i)
         iii = self.passBackward(self.rotors.copy(), ii)
         return iii
 
-    def rotateAll(self):
-        if self.rotors[1].onNotch():
-            self.rotors[2].rotate()
-        if self.rotors[0].onNotch():
-            self.rotors[1].rotate()
+    def rotateAll(self) -> None:
+        if self.rotors[1].onNotch():self.rotors[2].rotate()
+        if self.rotors[0].onNotch():self.rotors[1].rotate()
         self.rotors[0].rotate()
 
-    def passFoward(self,rotors, letter):
+    def passFoward(self,rotors, letter) -> str:
         newRotors = rotors.copy()
         if len(newRotors) == 0:
             return letter
         return self.passFoward(newRotors, newRotors.pop(0).encodefoward(letter))
         
-    def passBackward(self, rotors, letter):
+    def passBackward(self, rotors, letter) -> str:
         newRotors = rotors.copy()
         if len(newRotors) == 0:
             return letter
@@ -200,21 +208,15 @@ class rotorAssembly:
 
 class reflector():
     name = ''
-    config = LETTERS.copy()
-
-    def __init__(self, inconfig):
-        self.setConfig(inconfig)
+    config = None
+    def __init__(self, inconfig) -> None:
+        self.config = inconfig
         self.name = 'B' if self.config['B'] == 'R' else 'C'
 
-    def setConfig(self, config) -> dict:
-        for l in config:
-            line = l.split(' ')
-            self.config[line[0].upper()] = line[1].upper()
-            self.config[line[1].upper()] = line[0].upper()
-    def getName(self):
+    def getName(self) -> str:
         return self.name
 
-    def encode(self, c):
+    def encode(self, c) -> str:
         if type(self.config[c]) != type(int()):
             return self.config[c.upper()]
         return c.upper()
@@ -248,7 +250,6 @@ class housing:
         output = ""
         for letter in msg:
             output+= self.plugboard.encode(self.rotorAssemb.encode(self.plugboard.encode(letter)))
-        
         return output
 
 def human(conf):
