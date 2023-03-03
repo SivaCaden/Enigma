@@ -1,4 +1,10 @@
 import string
+
+# Enigma Machine By Caden Siva
+# Version 0.1.1
+# 2023-03-02
+
+
 L = string.ascii_uppercase
 indexes = [i for i in range(1, 27)]
 LETTERS = dict.fromkeys(string.ascii_uppercase, 0)
@@ -142,6 +148,8 @@ class roter:
                 self.notch = ("M", 'Z')
 
     def onNotch(self) -> bool:
+        if type(self.notch) == type(tuple):
+            return self.outbound[0] in self.notch
         return self.outbound[0] == self.notch
     def getName(self):
         return self.name
@@ -289,12 +297,7 @@ def main():
         print("Please note that there are a LOT of edge cases that are not\nhandeld grasefully, so please be careful with your input")
         print("If you would like to use a file to configure the machine, please\nuse the file config.csv for consistant results")
         print("-----------------------------------------------------------")
-        print("within the config.csv, you can see the format for entering data")
-        print("LINE 1: rotor configuration, separated by comma (exactly 3 unique rotors and in flavors of I- VIII)")
-        print("LINE 2: reflector configuration, B or C")
-        print("LINE 3: message to encode/decode")
-        print("LINE 4+: plugboard connections, separated by commas (upto 10))\nin additon, you cannot have duplicate connections in lines 4+\nor empty lines in the file")
-        print("lines 1 - 3 are required and MUST be in CAPS\nwhile lines 4+ must be lowercase and are optional; they are highly encouraged for higher cyptographic strength")
+        print("for useage instructions, please see the README.md file")
         print("-----------------------------------------------------------")
         print("===========================================================")
         conf = configurator()
