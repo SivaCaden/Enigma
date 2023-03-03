@@ -1,0 +1,1 @@
+print(len(('III, VIII, V').split(',')))
